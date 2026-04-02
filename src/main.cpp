@@ -7,121 +7,64 @@
 #include "Core/Time.h"
 #include "Core/GameObject.h"
 
-#define EXIT_SUCCESS 0
-#define EXIT_ERROR_SDL_INIT -1		//Error initializing SDL
-#define EXIT_ERROR_WINDOW -2		//Error creating window
-#define EXIT_ERROR_RENDERER -3		//Error creating renderer
-#define EXIT_ERROR_TEXTURE -4		//Error loading texture from assets
 
+class MyGame : public Game
+{
+private:
+
+	GameObject* player = new GameObject();
+	int playerXInput = 0;
+	int playerYInput = 0;
+	float playerMoveSpeed = 1.f;
+
+public:
+
+	bool OnInit() override
+	{
+		std::cout << "User init" << '\n';
+
+		this->player->SetPosition(200, 200);	//Position of the object in the world
+		this->player->SetImageSize(32, 32);	//Size of the image
+		this->player->SetSize(50, 50);		//Size of the object in the world
+		//this->player.SetImagePivot(0, 0);   Already 0, 0 to begin 
+		this->player->LoadTexture(GetRenderer(), "assets/playerTexture.png");
+		this->player->SetTextureScaleMode(SDL_SCALEMODE_NEAREST);
+
+		return true;
+	}
+
+	void OnUpdate() override
+	{
+		//Update stuff
+		this->playerXInput = GetKeys()[SDL_SCANCODE_RIGHT] - GetKeys()[SDL_SCANCODE_LEFT];
+		this->playerYInput = GetKeys()[SDL_SCANCODE_DOWN] - GetKeys()[SDL_SCANCODE_UP];
+
+		this->player->AddPosition(this->playerXInput * this->playerMoveSpeed * Time::deltaTime,
+			this->playerYInput * this->playerMoveSpeed * Time::deltaTime);
+	}
+
+	void OnRender() override
+	{
+		//Render stuff
+		this->player->Render(GetRenderer());
+	}
+
+	void OnQuit() override
+	{
+		//Destroy stuff
+		std::cout << "User Quit" << '\n';
+	}
+};
 
 int main(int argc, char* argv[])
 {
-	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_AUDIO))
-	{
-		SDL_Log("Failed to init SDL: %s", SDL_GetError());
-		return EXIT_ERROR_SDL_INIT;
-	}
 
-	int windowHeight = 400;
-	int windowWidth = 600;
+	MyGame game;
+	if (!game.Init())
+		return -1;
 
-	Window window;
-	if (!window.Init("Bullet Hell Boss", 600, 400, SDL_WINDOW_RESIZABLE))
-	{
-		SDL_Log("Failed to create window: %s", SDL_GetError());
-		return EXIT_ERROR_WINDOW;
-	}
-
-	Renderer renderer;
-	if (!renderer.Init(window.GetWindow(), 600, 400, SDL_LOGICAL_PRESENTATION_INTEGER_SCALE))
-	{
-		SDL_Log("Failed to create renderer: %s", SDL_GetError());
-		return EXIT_ERROR_RENDERER;
-	}
-	renderer.SetVSync(1); //Enable VSync
-	
-
-	GameObject* player = new GameObject();
-	player->SetPosition(200, 200);	//Position of the object in the world
-	player->SetImageSize(32, 32);	//Size of the image
-	player->SetSize(50, 50);		//Size of the object in the world
-	//player.SetImagePivot(0, 0);   Already 0, 0 to begin 
-	player->LoadTexture(renderer, "assets/playerTexture.png");
-	player->SetTextureScaleMode(SDL_SCALEMODE_NEAREST);
+	game.Run();
 
 
-
-
-	bool shouldQuit = false;		//While should quit is false the program will update
-
-	SDL_Event event;
-
-	int xMoveInput = 0;
-	int yMoveInput = 0;
-	float moveSpeed = 300.f;
-
-	
-	//Our update method
-
-	while (!shouldQuit)
-	{
-		Time::Update();
-
-#pragma region Poll Events
-		//Handle window events
-		SDL_PollEvent(&event);
-		switch (event.type)
-		{
-		case SDL_EVENT_QUIT:
-			shouldQuit = true;
-			break;
-
-		case SDL_EVENT_WINDOW_RESIZED:
-			windowWidth = event.window.data1;
-			windowHeight = event.window.data2;
-			break;
-
-		default:
-			break;
-		}
-
-#pragma endregion
-
-
-#pragma region Key Events
-		const bool* keys = SDL_GetKeyboardState(NULL);
-
-		xMoveInput = keys[SDL_SCANCODE_RIGHT] - keys[SDL_SCANCODE_LEFT];
-		yMoveInput = keys[SDL_SCANCODE_DOWN] - keys[SDL_SCANCODE_UP];
-#pragma endregion
-
-
-
-#pragma region Update
-
-		player->AddPosition(xMoveInput * moveSpeed * Time::deltaTime, yMoveInput * moveSpeed * Time::deltaTime);
-
-#pragma endregion
-
-
-
-		renderer.SetBackgroundColor(255, 0, 0, 255);
-		renderer.RenderClear();
-
-#pragma region Render Sprites
-
-		player->Render(renderer);
-
-#pragma endregion
-
-		renderer.RenderPresent();
-
-
-	}
-
-
-	renderer.DestroyRenderer();
-	window.DestroyWindow();
-	SDL_Quit();
 	return 0;
 }
